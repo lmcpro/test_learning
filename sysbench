@@ -1,0 +1,97 @@
+sysbench安装：
+sysbench 1.0.13
+测试流程
+1、	测试数据表结构：
+Create Table: CREATE TABLE `sbtest1` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `k` int(11) NOT NULL DEFAULT '0',
+  `c` char(120) NOT NULL DEFAULT '',
+  `pad` char(60) NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  KEY `k_1` (`k`)
+) ENGINE=InnoDB AUTO_INCREMENT=10323 DEFAULT CHARSET=latin1
+ 
+索引结构如下：
+
+ 
+2、	Sysbench命令解释
+sysbench --db-driver=mysql --mysql-user=test --mysql-password=123456 --mysql-host=100.67.54.146 --mysql-port=3306 --mysql-db=sysbench --mysql-storage-engine=innodb --range-size=100 --table-size=10000 --tables=100 --threads=128 --events=0 --time=600 --rand-type=uniform ../bin//share/sysbench/oltp_read_write.lua run
+sysbench的参数有很多，其中比较常用的包括：
+连接参数
+	--mysql-host：MySQL服务器主机名，默认localhost；如果在本机上使用localhost报错，提示无法连接MySQL服务器，改成本机的IP地址应该就可以了。
+	--mysql-port：MySQL服务器端口，默认3306
+	--mysql-user：用户名
+	--mysql-password：密码
+执行参数
+	--oltp-tables-count：测试的表数量
+	--oltp-table-size：测试的表的大小 
+	--threads：客户端的并发连接数
+	--time：测试执行的时间，单位是秒，一般不低于300s
+	--report-interval：生成报告的时间间隔，单位是秒，如10
+
+3、	CRUD测试
+测试类型：insert、delete、point_select、update_index、update_non_index
+先修改oltp_common.lua，取消单独创建二级索引，修改oltp_common.lua如下：
+①	第194行：添加一行INDEX k_%d(k)
+②	注释第239、240行：
+--con:query(string.format("CREATE INDEX k_%d ON sbtest%d(k)",
+--                          table_num, table_num))
+数据准备：
+sysbench --test=oltp_insert.lua --mysql-user=root --mysql-password= --mysql-host=localhost --mysql-port=3306 --mysql-db=test --mysql-storage-engine=innodb --table-size=10000 --tables=100 --threads=128 --events=0 --time=1200 prepare
+prepare参数说明如下：
+	--test=oltp_insert.lua
+表示调用oltp_insert脚本进行insert测试。
+	--tables=100
+表示测试的表数量为100张。
+	--table-size=10000
+表示每张表的记录行数为10000行。
+性能压测：
+sysbench --test=oltp_point_select.lua --mysql-user=root --mysql-password=  --mysql-host=localhost --mysql-port=3306 --mysql-db=test --mysql-storage-engine=innodb --table-size=10000 --tables=100 --threads=128 --events=0 --time=1200 run
+压测参数如下：
+	--test=oltp_insert.lua
+表示调用oltp_insert脚本执行insert测试，相应的update、delete等操作都可以更改为相应的脚本进行测试。
+	--threads=128
+表示并发连接数为128.
+	--time=1200
+表示压测时长为1200秒（通常压测时间应不小于300秒）
+4、	OLTP测试
+测试前，修改tests/include/oltp_legacy目录下的common.lua脚本：
+1 第37行，加上INDEX k_i(k),
+2 注释掉第99行，取消独立创建二级索引：
+--db_query("CREATE INDEX k_" .. i .. " on sbtest" .. i .. "(k)")
+数据准备：
+sysbench –test=oltp.lua --mysql-user=root --mysql-password= --mysql-host=localhost --mysql-port=3306 --mysql-db=test --mysql-storage-engine=innodb --table-size=10000 --tables=1 --threads=128 --events=0 --time=300 prepare
+	--test=oltp.lua
+调用oltp.lua脚本进行测试。
+	--tables=1
+表示单表测试。
+	--table-size=10000
+表记录为10000条。
+压测命令：
+sysbench –test=oltp.lua --mysql-user=root --mysql-password= --mysql-host=localhost --mysql-port=3306 --mysql-db=test --mysql-storage-engine=innodb --table-size=10000 --tables=1 --threads=128 --events=0 --time=300 run
+	--threads=128
+表示并发连接数为128个。
+	--time=300
+表示压测时长为300秒。
+5、	测试结果分析：
+ 
+关于测试结果，主要关注以下参数：
+transactions：事务总数及tps
+queries：查询总数及qps
+Latency-95th percentile：前95%的请求的最大响应时间
+6、	数据清理
+这里由于数据库的特点，目前还不能支持sysbench的cleanup操作，因此，重新测试需要将含有空库test的data重新导入。
+7、	测试方案
+将MySQL5.7.19与MA进行性能对比，首先确保测试环境保持一致，然后变更测试类型和并发连接数开始进行测试：
+测试类型： select、insert、delete、update_index、update_non-index、write_only、read_only、oltp等
+并发连接数：64、128、256、512
+每次测试三次，分别取TPS、QPS的平均值，将最后的结果绘制成图，如下。
+ 
+8、	一些注意事项
+①测试最好在物理机上进行，虚拟机会造成性能瓶颈，运行sysbench的客户机和MySQL DB服务器尽量不要在同一台主机上，也包括一台宿主机上启动两个虚机的情形；
+②测试表的数量不宜太少，至少要求20个表以上；
+③每个表的数据量不宜太少，通常至少要求1千万以上；
+④每次进行基准压测的时长不宜过短，通常要求持续15分钟以上；
+⑤每轮测试完毕后，中间至少暂停5分钟，或者确认系统负载完全恢复空跑状态为止；
+⑥在测试时要确保没有其他测试业务在同时进行，否则会影响测试结果。
+
