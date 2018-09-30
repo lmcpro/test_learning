@@ -1,0 +1,56 @@
+参考网址：https://www.cnblogs.com/Anker/p/6079580.html
+
+ulimit -c unlimited （每次重启计算机需要执行）
+cd /etc/security
+vim limits.conf
+在<domain>下增加一行：
+*  soft  core  unlimited
+执行echo 1 > /proc/sys/kernel/core_uses_pid
+在home下创建目录/data/coredump
+执行echo "/home/lw/data/coredump/core-%e-%p-%t" > /proc/sys/kernel/core_pattern设置文件保存位置和命名方式
+查看core,使用命令 gdb program core 来查看 core 文件，其中 program 为可执行程序名，core 为生成的 core 文件名。例如gdb ./main core-main-3883-1531211436
+
+
+echo /home/lw/MA0709/lmc/sql/core.mysqld.4230 > /proc/sys/kernel/core_pattern
+echo 4230 > /proc/sys/kernel/core_uses_pid
+echo /home/lw/data/coredump/core.ma_se.3176> /proc/sys/kernel/core_pattern
+
+
+echo /proc/1383/cwd/core.mysqld.4230 >  /proc/sys/kernel/core_pattern
+echo 4230 > /proc/sys/kernel/core_uses_pid
+
+
+正确做法如下（可能有些不需要）
+echo 2 >/proc/sys/fs/suid_dumpable
+chmod 0777 /var/crash
+echo /var/crash/core > /proc/sys/kernel/core_pattern
+echo /home/lw/MA0709/lmc/sql/core > /proc/sys/kernel/core_pattern
+echo 1 >/proc/sys/kernel/core_uses_pid
+启动se和ce，ce的启动参数加上--core-file，杀死ce时用kill -SEGV +当前mysqld的pid
+在/home/lw/MA0709/lmc/sql目录下即可看到生成的core+pid文件
+查看core文件：
+lw@lw-ubuntu16:~/MA0709/lmc/sql$ gdb /home/lw/MA0709/lmc/sql/mysqld core.2784
+(gdb) where或bt
+
+
+生成coredump文件的方法：(通过systemd)
+安装coredumpctl，apt install systemd-coredump
+它会配置/proc/sys/kernel/core_pattern的路径,无需改动|/lib/systemd/systemd-coredump %P %u %g %s %t 9223372036854775808 %e
+运行coredumpctl或coredumpctl list 'core.6423',coredumpctl list 'ma_se'|tail -n 5,来查看转储记录
+运行coredumpctl -o core dump 6423得到匹配'ma_se'字符串的所有转储记录.
+coredump文件的保存路径为：/var/lib/systemd/coredump,及时将coredump文件(一个压缩文件,.xz结尾)保存至想要的目录cp core.* /home/lw/,
+cp /var/lib/systemd/coredump/core.ma_se.1000** /home/lw/data  解压方式为xz -d.
+gdb调试方式为(gdb+程序+coredump文件):
+gdb exe core.ma_se.1000.323bd805fbb4479d8ca235afadbf95f0.6423.1531362530000000000000
+
+记住几个常用的gdb命令：
+l(list) ，显示源代码，并且可以看到对应的行号；
+b(break)x, x是行号，表示在对应的行号位置设置断点；
+p(print)x, x是变量名，表示打印变量x的值
+r(run), 表示继续执行到断点的位置
+n(next),表示执行下一步
+c(continue),表示继续执行
+q(quit)，表示退出gdb
+
+
+
