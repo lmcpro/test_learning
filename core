@@ -52,5 +52,8 @@ n(next),表示执行下一步
 c(continue),表示继续执行
 q(quit)，表示退出gdb
 
+查看文件：
+堆栈信息用bt或where查看
+
 
 
