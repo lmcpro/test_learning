@@ -1,0 +1,105 @@
+tpcc-mysql的源码位置：https://github.com/Percona-Lab/tpcc-mysql
+安装方法：
+首先确保时线安装了MySQL环境
+cd src 
+make
+安装成功之后会在tpcc-mysql目录下生成两个可执行文件：tpcc_load和tpcc_start,分别是加载数据和执行tpcc的功能。
+接下来开始执行tpcc测试：
+1、开启mysqld服务，打开客户端，创建数据库tpcc:create database tpcc;
+2、进入tpcc-mysql目录，执行:
+mysql -u root -p tpcc<create_table.sql; //创建表结构
+mysql -u root -p tpcc<add_fkey_idx.sql; //添加外键信息
+3、导入数据：
+./tpcc_load localhost tpcc root 'pwd' 1   //这里pwd为数据库密码
+解释如下：
+tpcc_load [server] [DB] [user] [pass] [warehouse]
+Server: 服务器名
+DB: 数据库名
+user: 用户名
+pass: 密码
+Warehouse: 仓库的数量 ,一般不小于100，ssd的大于1000，虚拟机环境可以设置为1
+4、tpcc_start压测:
+tpcc_start -h server_host -P port -d database_name -u mysql_user -p mysql_password -w warehouses -c connections -r warmup_time -l running_time -i report_interval -f report_file
+各个参数用法如下：
+-h server_host: 服务器名
+-P port : 端口号，默认为3306
+-d database_name: 数据库名
+-u mysql_user : 用户名
+-p mysql_password : 密码
+-w warehouses: 仓库的数量
+-c connections : 指定并发连接数,默认为1
+-r warmup_time : 热身时间，单位:s，默认为10s ,热身是为了将数据加载到内存。
+-l running_time: 测试时间，单位:s，默认为20s
+-i report_interval: 指定生成报告间隔时长
+-f report_file: 测试结果输出文件
+参考测试:
+./tpcc_start -h 10.x.x.x -d tpcc -u tpcc -p 'tpcc' -w 1 -c 256 -r 120 -l 300 -f ./tpcc_mysql_256_1023.log
+这里仓库数量为1(虚拟环境下),并发连接数为256,测试时间300秒
+每10秒出一次压测数据
+图以逗号分隔，共6列
+   第一列，第N次10秒
+   第二列，新订单成功执行压测的次数(推迟执行压测的次数):90%事务的响应时间|本轮测试最大响应时间，新订单事务数也被认为是总有效事务数的指标
+   第三列，支付业务成功执行次数(推迟执行次数):90%事务的响应时间|本轮测试最大响应时间
+   第四列，订单状态业务成功执行次数(推迟执行次数):90%事务的响应时间|本轮测试最大响应时间
+   第五列，物流发货业务成功执行次数(推迟执行次数):90%事务的响应时间|本轮测试最大响应时间
+   第六列，库存仓储业务成功执行次数(推迟执行次数):90%事务的响应时间|本轮测试最大响应时间
+压测结束，下边是两次统计结果:
+<Raw Results>
+  [0] sc:33231  lt:0  rt:0  fl:0 
+  [1] sc:33229  lt:0  rt:0  fl:0 
+  [2] sc:3323  lt:0  rt:0  fl:0 
+  [3] sc:3322  lt:0  rt:0  fl:0 
+  [4] sc:3322  lt:0  rt:0  fl:0 
+ in 300 sec.
+
+<Raw Results2(sum ver.)>
+  [0] sc:33231  lt:0  rt:0  fl:0 
+  [1] sc:33230  lt:0  rt:0  fl:0 
+  [2] sc:3323  lt:0  rt:0  fl:0 
+  [3] sc:3322  lt:0  rt:0  fl:0 
+  [4] sc:3322  lt:0  rt:0  fl:0 
+
+<Constraint Check> (all must be [OK])
+ [transaction percentage]
+        Payment: 43.48% (>=43.0%) [OK]
+   Order-Status: 4.35% (>= 4.0%) [OK]
+       Delivery: 4.35% (>= 4.0%) [OK]
+    Stock-Level: 4.35% (>= 4.0%) [OK]
+ [response time (at least 90% passed)]
+      New-Order: 100.00%  [OK]
+        Payment: 100.00%  [OK]
+   Order-Status: 100.00%  [OK]
+       Delivery: 100.00%  [OK]
+    Stock-Level: 100.00%  [OK]
+
+<TpmC>
+                 6646.200 TpmC
+
+解释：
+  [0] New-Order，新订单业务成功(success,简写sc)次数，延迟(late,简写lt)次数，重试(retry,简写rt)次数，失败(failure,简写fl)次数
+  [1] sc:100552  lt:0  rt:0  fl:0    -- Payment，支付业务统计，支付业务成功(success,简写sc)次数，延迟(late,简写lt)次数，重试(retry,简写rt)次数，失败(failure,简写fl)次数
+  [2] sc:10059  lt:0  rt:0  fl:0    -- Order-Status，订单状态业务统计，订单状态业务成功(success,简写sc)次数，延迟(late,简写lt)次数，重试(retry,简写rt)次数，失败(failure,简写fl)次数
+  [3] sc:10057  lt:0  rt:0  fl:0    -- Delivery，发货业务统计，发货业务成功(success,简写sc)次数，延迟(late,简写lt)次数，重试(retry,简写rt)次数，失败(failure,简写fl)次数
+  [4] sc:10058  lt:0  rt:0  fl:0    -- Stock-Level，库存业务统计，库存业务成功(success,简写sc)次数，延迟(late,简写lt)次数，重试(retry,简写rt)次数，失败(failure,简写fl)次数
+Payment 付业务占总业务43.47%
+2078.000 TpmC   //TpmC结果值（每分钟事务数，该值是第一次统计结果中的新订单事务数除以总耗时分钟数，例如本例中是：10391/300/60 = 2078）
+script目录下的一些脚本主要是一些性能数据采集以及分析的
+
+
+对生成tpcc_mysql_256_1023.log文件进行处理，绘图过程如下：
+#vim log.conf
+以下是log.conf的内容：
+set terminal gif small size 480,360 #指定输出成gif图片，且图片大小为550×25
+set output "tcpp.gif" #指定输出gif图片的文件名
+set title "MySQL Performance" #图片标题
+set style data lines #显示网格
+set xlabel "Time/s" #X轴标题
+set ylabel "Data" #Y轴标题
+set grid #显示网格
+plot \
+"tpcc_mysql_256_1023.log" using 1:2 title "Total throughput" with lines #从tpcc-graphic-data.txt文件中读取第一列和第二列作为X轴和Y轴数据，示例名"Total throughput"
+
+用绘图工具gnuplot运行生成tcpp.gif：
+执行cat log.conf | gnuplot
+可以看到在/tpcc-mysql目录下已经生成了tcpp.gif图片文件，即可查看。
+
