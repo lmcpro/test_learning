@@ -1,0 +1,8 @@
+https://store.enthought.com/downloads/
+https://blog.csdn.net/hellomonkey123/article/details/83045791
+https://blog.csdn.net/u010320710/article/details/42921719 
+安装canopy-1.5.1-full-rh5-32.sh
+把这个文件移动到ubuntu的/tmp目录。之后进入终端，cd /tmp。然后运行bash canopy-1.5.1-full-rh5-32.sh。
+安装完后还要配置一下环境。第一次运行就会进入配置环境的GUI。在终端输入：/home/lw/Canopy/canopy。一切选择默认选项。
+安装完成.
+运行:~/Canopy/canopy
