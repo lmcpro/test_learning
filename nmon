@@ -1,0 +1,21 @@
+参考https://www.cnblogs.com/yangxia-test/p/4836063.html
+sudo apt install nmon
+运行:nmon   用不同字母查看不同信息
+key  --- statistics which toggle on/off ---                                       │
+│     h = This help information                                                         │
+│     r = RS6000/pSeries CPU/cache/OS/kernel/hostname details + LPAR                    │
+│     t = Top Process Stats 1=basic 3=CPU                                               │
+│         u = shows command arguments (hit twice to refresh)                            │
+│     c = CPU by processor             l = longer term CPU averages                     │
+│     m = Memory & Swap stats L=Huge   j = JFS Usage Stats                              │
+│     n = Network stats                N = NFS                                          │
+│     d = Disk I/O Graphs D=Stats      o = Disks %Busy Map                              │
+│     k = Kernel stats & loadavg       V = Virtual Memory                               │
+│     g = User Defined Disk Groups [start nmon with -g <filename>]                      │
+│     v = Verbose Simple Checks - OK/Warnings/Danger                                    │
+│     b = black & white mode                                                            │
+│     --- controls ---                                                                  │
+│     + and - = double or half the screen refresh time                                  │
+│     q = quit                     space = refresh screen now                           │
+│     . = Minimum Mode =display only busy disks and processes                           │
+│     0 = reset peak counts to zero (peak = ">")         
