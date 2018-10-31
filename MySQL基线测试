@@ -1,0 +1,7 @@
+http://www.ttlsa.com/mysql/mysql-test-for-baseline/
+tpcc-mysql：Percona的一款流行的开元的测试工具。（当然也可以使用sysbench，这里建议使用sysbench 5，有很多新的特性）。
+orzdba：阿里的一款监测MySQL相关性能的工具。
+nmon：IBM的一款搜集监测IO、CPU等信息的工具。
+nmon analyser：和nmon配套使用的分析工具。
+tpcc_report.py：笔者使用python编写的，用来分析tpcc-mysql测试完输出的信息并输出报表。
+orzdba_report.py：笔者使用python编写的，用来分析orzdba监控输出的数据并生成报表
