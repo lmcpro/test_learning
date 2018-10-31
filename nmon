@@ -19,3 +19,15 @@ key  --- statistics which toggle on/off ---                                     
 │     q = quit                     space = refresh screen now                           │
 │     . = Minimum Mode =display only busy disks and processes                           │
 │     0 = reset peak counts to zero (peak = ">")         
+CPU、内存、磁盘和网络的消耗情况都被很直观的展现出来
+生成nmon报告。
+1).采集数据：
+#nmon -s10 -c60 -f -m /home/
+参数解释：
+-s10 每 10 秒采集一次数据。
+-c60 采集 60 次，即为采集十分钟的数据。
+-f 生成的数据文件名中包含文件创建的时间。
+-m 生成的数据文件的存放目录。
+这样就会生成一个 nmon 文件，并每十秒更新一次，直到十分钟后。
+生成的文件名如： <hostname>_090824_1306.nmon ，"<hostname>" 是这台主机的主机名。
+nmon -h查看更多帮助信息。
