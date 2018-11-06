@@ -43,6 +43,7 @@ tpcc_start -h server_host -P port -d database_name -u mysql_user -p mysql_passwo
    第四列，订单状态业务成功执行次数(推迟执行次数):90%事务的响应时间|本轮测试最大响应时间
    第五列，物流发货业务成功执行次数(推迟执行次数):90%事务的响应时间|本轮测试最大响应时间
    第六列，库存仓储业务成功执行次数(推迟执行次数):90%事务的响应时间|本轮测试最大响应时间
+5、压测结果分析：
 压测结束，下边是两次统计结果:
 <Raw Results>
   [0] sc:33231  lt:0  rt:0  fl:0 
@@ -84,9 +85,9 @@ tpcc_start -h server_host -P port -d database_name -u mysql_user -p mysql_passwo
 Payment 付业务占总业务43.47%
 2078.000 TpmC   //TpmC结果值（每分钟事务数，该值是第一次统计结果中的新订单事务数除以总耗时分钟数，例如本例中是：10391/300/60 = 2078）
 script目录下的一些脚本主要是一些性能数据采集以及分析的
+主要记录结果：Tpmc
 
-
-对生成tpcc_mysql_256_1023.log文件进行处理，绘图过程如下：
+6、对生成tpcc_mysql_256_1023.log文件进行处理，绘图过程如下：
 #vim log.conf
 以下是log.conf的内容：
 set terminal gif small size 480,360 #指定输出成gif图片，且图片大小为550×25
@@ -99,7 +100,12 @@ set grid #显示网格
 plot \
 "tpcc_mysql_256_1023.log" using 1:2 title "Total throughput" with lines #从tpcc-graphic-data.txt文件中读取第一列和第二列作为X轴和Y轴数据，示例名"Total throughput"
 
-用绘图工具gnuplot运行生成tcpp.gif：
+7、用绘图工具gnuplot运行生成tcpp.gif：
 执行cat log.conf | gnuplot
 可以看到在/tpcc-mysql目录下已经生成了tcpp.gif图片文件，即可查看。
 
+8.	用tpcc_report.py分析结果：
+tpcc_report.py 下载地址：
+http://www.ttlsa.com/wp-content/uploads/2016/02/tpcc_report.zip
+分析命令：python tpcc_report.py tpcc_mysql_256_1023.log
+分析结果生成一个文件夹，可观测到响应时间等信息。
