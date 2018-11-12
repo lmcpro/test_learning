@@ -1,0 +1,308 @@
+/*
+ * test2.cpp
+ *
+ *  Created on: 2018年11月10日
+ *      Author: lw
+ */
+
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <mysql.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <time.h>
+#include <arpa/inet.h>
+using namespace std;
+
+MYSQL mysql1; //master连接
+MYSQL mysql2; //slave连接
+MYSQL_FIELD *fd;  //字段列数组
+char field[32][32];  //存字段名二维数组
+MYSQL_RES *res1; //这个结构代表返回行的一个查询结果集
+MYSQL_RES *res2; //这个结构代表返回行的一个查询结果集
+MYSQL_ROW column; //一个行数据的类型安全(type-safe)的表示，表示数据行的列
+char query[150]; //查询语句
+int times;//次数
+int delay;//延迟
+//time_t t_start[times], t_end[times];
+//double  duration[times];
+int success=0,fail=0;
+double result;
+
+void ConnectDatabasemaster();     //函数声明
+void ConnectDatabaseslave();
+void FreeConnectmaster();
+void FreeConnectslave();
+void QueryFirst();
+void sleep_ms();
+void Insert();
+void Query();
+void Delete();
+
+struct DBInfo{
+	char host_master[50];
+	char host_slave[50];
+	char user_master[50];
+	char user_slave[50];
+	char passwd_master[50];
+	char passwd_slave[50];
+	char db_master[50];
+	char db_slave[50];
+	char sock_master[50];
+	char sock_slave[50];
+	int port_master;
+	int port_slave;
+
+};
+
+
+
+void sleep_ms(unsigned int secs)
+{
+    struct timeval tval;
+    tval.tv_sec=secs/10000;
+    tval.tv_usec=(secs*1000)%1000000;
+    select(0,NULL,NULL,NULL,&tval);
+}
+
+//static void print_multiple_results(Query& query)
+//{
+//	// 执行查询并输出结果表
+//	StoreQueryResult res = query.store();
+//	print_result(res, 0);
+//	for (int i = 1; query.more_results(); ++i) {
+//		res = query.store_next();
+//		print_result(res, i);
+//	}
+//}
+
+//连接数据库
+void ConnectDatabasemaster(void * dbinfo_master)
+{
+	char * host_master = ((DBInfo *)dbinfo_master) -> host_master;
+	char * user_master = ((DBInfo *)dbinfo_master) -> user_master;
+	char * passwd_master = ((DBInfo *)dbinfo_master) -> passwd_master;
+	char * db_master = ((DBInfo *)dbinfo_master) -> db_master;
+	char * sock_master = ((DBInfo *)dbinfo_master) -> sock_master;
+	int port_master = ((DBInfo *)dbinfo_master) -> port_master;
+    mysql_init(&mysql1);
+    //if (!(mysql_real_connect(&mysql1,"localhost", "root", "mysql", "test_repl",3306,"/tmp/mysql.sock",0))) //中间分别是主机，用户名，密码，数据库名，端口号（可以写默认0或者3306等），可以先写成参数再传进去
+//    if (!(mysql_real_connect(&mysql1,"222.20.73.17", "s1", "mysql", "test",3306,"/tmp/mysql.sock",0))) //中间分别是主机，用户名，密码，数据库名，端口号（可以写默认0或者3306等），可以先写成参数再传进去
+    if (!(mysql_real_connect(&mysql1, host_master, user_master, passwd_master, db_master, port_master , sock_master ,0))) //中间分别是主机，用户名，密码，数据库名，端口号（可以写默认0或者3306等），可以先写成参数再传进去
+    //222.20.73.17 s1 mysql test 3306
+    {
+        cout << "Error connecting to master-database:" << mysql_error(&mysql1) << endl;
+        return;
+    }
+    else
+    {
+        cout << "Master Connected..." << endl;
+        return;
+    }
+}
+
+void ConnectDatabaseslave(void * dbinfo_slave)
+{
+	char * host_slave = ((DBInfo *)dbinfo_slave) -> host_slave;
+	char * user_slave = ((DBInfo *)dbinfo_slave) -> user_slave;
+	char * passwd_slave = ((DBInfo *)dbinfo_slave) -> passwd_slave;
+	char * db_slave = ((DBInfo *)dbinfo_slave) -> db_slave;
+	char * sock_slave = ((DBInfo *)dbinfo_slave) -> sock_slave;
+	int port_slave = ((DBInfo *)dbinfo_slave) -> port_slave;
+    mysql_init(&mysql2);
+    //if (!(mysql_real_connect(&mysql2,"localhost", "root", "mysql", "test_repl",3307,"/home/lw/mysql_dev/mlog_length_field_test/MA/bld/sql/mysql.sock",0))) //中间分别是主机，用户名，密码，数据库名，端口号（可以写默认0或者3306等），可以先写成参数再传进去
+//    if (!(mysql_real_connect(&mysql2,"localhost", "root", "mysql", "test",3306,"/tmp/mysql.sock",0))) //中间分别是主机，用户名，密码，数据库名，端口号（可以写默认0或者3306等），可以先写成参数再传进去
+    if (!(mysql_real_connect(&mysql2, host_slave , user_slave , passwd_slave, db_slave , port_slave , sock_slave ,0))) //中间分别是主机，用户名，密码，数据库名，端口号（可以写默认0或者3306等），可以先写成参数再传进去
+    //localhost root mysql test 3306
+    {
+    	cout << "Error connecting to slave-database:" << mysql_error(&mysql2) << endl;
+        return;
+    }
+    else
+    {
+        cout << "Slave Connected..." << endl;
+        return;
+    }
+}
+//释放资源
+void FreeConnectmaster()
+{
+   // mysql_free_result(res);
+    mysql_close(&mysql1);
+}
+void FreeConnectslave()
+{
+    //mysql_free_result(res);
+    mysql_close(&mysql2);
+}
+void QueryFirst()
+{
+	sprintf(query, "select * from t1 ");
+	mysql_query(&mysql1,"set names gbk");
+	if(mysql_query(&mysql1, query))
+	{
+		cout << "Master QueryFirst failed" << mysql_error(&mysql1) <<endl;
+//		return false;
+		return;
+	}
+	else
+	{
+		cout << "Master QueryFirst Finished!" << endl;
+	}
+	res1=mysql_store_result(&mysql1);
+	mysql_free_result(res1);
+
+	mysql_query(&mysql2,"set names gbk");
+	if(mysql_query(&mysql2, query))
+	{
+		cout << "Slave QueryFirst failed" << mysql_error(&mysql2) <<endl;
+		//return false;
+		return;
+	}
+	else
+	{
+		cout << "Slave QueryFirst Finished!" << endl;
+	}
+	res2=mysql_store_result(&mysql2);
+	mysql_free_result(res2);
+}
+//插入数据
+void Insert(int val)
+{
+    sprintf(query, "insert into t1 values (%d)",val);
+    if(mysql_query(&mysql1, query))
+    {
+        cout << "Master Insert failed: " << mysql_error(&mysql1) <<endl;
+//        return false;
+        return;
+    }
+    else
+    {
+//        cout << "Insert success!" << endl;//屏蔽打印信息
+//        return true;
+        return;
+    }
+//    t_start[val] = time(NULL);
+}
+//查询数据
+void Query(int val)
+{
+    sprintf(query, "select * from t1 where id = '%d'",val);
+    mysql_query(&mysql2,"set names gbk");
+    if(mysql_query(&mysql2, query))
+    {
+        cout << "Slave Query failed: " << mysql_error(&mysql2) <<endl;
+//        return false;
+        return;
+    }
+//    else
+//    {
+//        cout << "No error in query format!" << endl;
+//    }
+    //获取结果集
+    if (!(res2=mysql_store_result(&mysql2)))
+    {
+        cout << "Couldn't get result from " << mysql_error(&mysql2)<< endl;
+//        return false;
+        //return;
+    }
+    if (!(mysql_affected_rows(&mysql2)))
+    {
+//    	cout<< "Couldn't get result from slave\n"<< endl;//屏蔽打印信息
+//    	return false;
+    	//fail++;
+    	//return;
+    	fail++;
+    }
+    else
+    {
+//    	cout << "Query success!" << endl;//屏蔽打印信息
+    	success++;
+    }
+//    return true;
+//    t_end[val] = time(NULL);
+    mysql_free_result(res2);
+    return;
+}
+
+void Delete()
+{
+	sprintf(query, "delete from t1");
+	if(mysql_query(&mysql1, query))
+	{
+	   cout << "delete failed: " << mysql_error(&mysql1) <<endl;
+//	   return false;
+	   return;
+	}
+	else
+	{
+		cout << "delete success!" << endl;//屏蔽打印信息
+		//return true;
+		return;
+	    }
+}
+
+
+int main(int argc,char **argv)
+{
+	DBInfo dbinfo_master;
+	DBInfo dbinfo_slave;
+////	DBInfo dbinfo;
+//	cout << "请输入延迟(ms):" << endl;
+//	cin >> delay;
+//	cout << "请输入测试次数:" << endl;
+//	cin >> times;
+//	cout << "input hostname，user，passwd，db-name，port,sock of master: "<< endl;
+//	cin>> dbinfo_master.host_master >> dbinfo_master.user_master >> dbinfo_master.passwd_master >> dbinfo_master.db_master >> dbinfo_master.port_master >> dbinfo_master.sock_master;
+////	cout << "input hostname of master: "<< endl;
+////	cin >> dbinfo_master.host_master ;
+////	cout << "input user of master: "<< endl;
+////	cin >> dbinfo_master.user_master ;
+////	cout << "input passwd of master: "<< endl;
+////	cin >> dbinfo_master.passwd_master ;
+////	cout << "input db-name of master: "<< endl;
+////	cin >> dbinfo_master.db_master ;
+////	cout << "input port of master: "<< endl;
+////	cin >> dbinfo_master.port_master ;
+//
+//	cout << "input hostname，user，passwd，db-name，port of slave: "<< endl;
+//	cin >> dbinfo_slave.host_slave >> dbinfo_slave.user_slave >> dbinfo_slave.passwd_slave >> dbinfo_slave.db_slave >> dbinfo_slave.port_slave >> dbinfo_slave.sock_slave;
+////	cout << "input hostname of slave: "<< endl;
+////	cin >> dbinfo_slave.host_slave ;
+////	cout << "input user of slave: "<< endl;
+////	cin >> dbinfo_slave.user_slave ;
+////	cout << "input passwd of slave: "<< endl;
+////	cin >> dbinfo_slave.passwd_slave ;
+////	cout << "input db-name of slave: "<< endl;
+////	cin >> dbinfo_slave.db_slave ;
+////	cout << "input port of slave: "<< endl;
+////	cin >> dbinfo_slave.port_slave ;
+
+
+	cout << "请输入延迟(ms);测试次数;hostname，user，passwd，db-name，port,sock of master;hostname，user，passwd，db-name，port of slave" << endl;
+	cin >> delay >> times >> dbinfo_master.host_master >> dbinfo_master.user_master >> dbinfo_master.passwd_master >> dbinfo_master.db_master >> dbinfo_master.port_master >> dbinfo_master.sock_master >> dbinfo_slave.host_slave >> dbinfo_slave.user_slave >> dbinfo_slave.passwd_slave >> dbinfo_slave.db_slave >> dbinfo_slave.port_slave >> dbinfo_slave.sock_slave ;
+
+    ConnectDatabasemaster(&dbinfo_master);
+    ConnectDatabaseslave(&dbinfo_slave);
+    QueryFirst();
+    for(int i=1;i<=times;i++)
+    {
+    	fail=0;
+        Insert(i);
+        sleep_ms(delay);
+        Query(i);
+//        duration[i] = t_end[i] - t_start[i];
+//        cout << "duration is:" << duration[i] << endl;
+    }
+    result = double(success)/times;
+    cout << result*100 << "%" <<endl;
+    Delete();
+    FreeConnectmaster();
+    FreeConnectslave();
+    system("pause");
+    return 0;
+}
