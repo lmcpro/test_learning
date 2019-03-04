@@ -21,5 +21,8 @@ sudo apt-get install libperl-dev
 sudo apt-get install libcurl4-gnutls-dev
 wget http://sourceforge.net/projects/net-snmp/files/net-snmp/5.8/net-snmp-5.8.tar.gz
 ./configure --prefix=/usr/local/net-snmp --enable-mfd-rewrites --with-default-snmp-version="2" --with-sys-location="China" --with-logfile="/var/log/anmpd.log" --with-persistent-directory="/var/net-snmp"
+*****出错
+./configure --prefix=/usr/local/net-snmp
+[参考解决：https://blog.csdn.net/jiangxin04211/article/details/78444821]
 make&&make install
-******************************************************************
+
