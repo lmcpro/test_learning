@@ -1,0 +1,23 @@
+install mysql:
+lmc@lmc-pro:/usr/local/mysql$ ./bin/mysqld --defaults-file=/usr/local/mysql/my.cnf
+
+zabbix2.0未安装：
+./configure --prefix=/home/lmc/software/zabbix --enable-server --enable-agent --with-mysql-includes=/usr/local/mysql/include --with-net-snmp --with-libcurl
+以下是源码安装zabbix-3.0:
+./configure --prefix=/home/lmc/software/zabbix --enable-server --enable-agent --with-mysql --libdir=/usr/local/mysql/lib/ --enable-ipv6 --with-net-snmp --with-libcurl --with-libxml2
+**problem:configure: error: MySQL library not found
+**solve:sudo apt-get install libmysqlclient-dev
+./configure --prefix=/home/lmc/software/zabbix --enable-server --enable-agent --with-mysql --enable-ipv6 --with-net-snmp --with-libcurl --with-libxml2
+****configure: error: LIBXML2 library not found
+****sudo apt-get install libxml2
+sudo apt-get install libxml2-dev
+./configure --prefix=/home/lmc/software/zabbix --enable-server --enable-agent --with-mysql --enable-ipv6 --with-net-snmp --with-libcurl --with-libxml2=/usr/local/bin/xml2-config
+--with-libxml2=/usr/local/bin/xml2-config
+******configure: error: Invalid Net-SNMP directory - unable to find net-snmp-config
+
+******
+sudo apt-get install libperl-dev
+sudo apt-get install libcurl4-gnutls-dev
+wget http://sourceforge.net/projects/net-snmp/files/net-snmp/5.8/net-snmp-5.8.tar.gz
+./configure --prefix=/usr/local/net-snmp --enable-mfd-rewrites --with-default-snmp-version="2" --with-sys-location="China" --with-logfile="/var/log/anmpd.log" --with-persistent-directory="/var/net-snmp"
+make&&make install
